@@ -73,8 +73,8 @@ func updateMovie(c *gin.Context) { // Функция для обновления
 		return
 	}
 
-	var updatedMovie Movies // Исправлено на правильный тип
-	if err := c.ShouldBindJSON(&updatedMovie); err != nil {
+	var updatedMovie Movies                                 // Исправлено на правильный тип
+	if err := c.ShouldBindJSON(&updatedMovie); err != nil { // Проверяем, что тело запроса содержит корректные данные
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
 	}
