@@ -80,7 +80,7 @@ func updateMovie(c *gin.Context) { // Функция для обновления
 	}
 
 	for i, m := range movies { // Обновляем цикл для поиска по ID
-		if m.ID == id {
+		if m.ID == id { // Если ID совпадает, обновляем фильм
 			movies[i].Title = updatedMovie.Title
 			movies[i].Description = updatedMovie.Description
 			movies[i].Year = updatedMovie.Year
