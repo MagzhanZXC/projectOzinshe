@@ -15,11 +15,7 @@ type Movies struct {
 	PosterURL   string `json:"poster_url"`
 }
 
-var movies = []Movies{
-	{ID: 1, Title: "Тачки", Description: "«Тачки» — история гонщика Маккуина, который в маленьком городке учится дружбе и настоящим ценностям.", Year: 2006, PosterURL: "https://example.com/cars.jpg"},
-	{ID: 2, Title: "Как приручить дракона", Description: "«Как приручить дракона» — это история о дружбе между мальчиком и драконом.", Year: 2010, PosterURL: "https://example.com/how-to-train-your-dragon.jpg"},
-	{ID: 3, Title: "Вверх", Description: "«Вверх» — это трогательная история о дружбе и приключениях старика и мальчика, которые отправляются в путешествие на воздушном шаре.", Year: 2009, PosterURL: "https://example.com/up.jpg"},
-}
+var db *qorm.DB // Глобальная переменная для базы данных
 
 func pingHandler(c *gin.Context) { // Функция для обработки запроса на /ping
 	// Отправляем ответ с сообщением "pong"
