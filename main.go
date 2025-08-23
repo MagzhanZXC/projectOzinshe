@@ -1,21 +1,24 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 type Movies struct {
-	ID          int    `json:"id qorm:"primary_key"`
+	ID          int    `json:"id" gorm:"primary_key"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	Year        int    `json:"year"`
 	PosterURL   string `json:"poster_url"`
 }
 
-var db *qorm.DB // Глобальная переменная для базы данных
+var db *gorm.DB // Глобальная переменная для базы данных
 
 func pingHandler(c *gin.Context) { // Функция для обработки запроса на /ping
 	// Отправляем ответ с сообщением "pong"
@@ -29,8 +32,8 @@ func pingHandler(c *gin.Context) { // Функция для обработки �
 }
 
 func moviesHandler(c *gin.Context) { // Функция для обработки запроса на /movies
-	var movies []Movies			   // Создаем срез для хранения фильмов
-	db.Find(&movies)			   // Получаем все фильмы из базы данных
+	var movies []Movies           // Создаем срез для хранения фильмов
+	db.Find(&movies)              // Получаем все фильмы из базы данных
 	c.JSON(http.StatusOK, movies) // Отправляем список фильмов в формате JSON
 }
 
@@ -42,14 +45,13 @@ func getMovieByID(c *gin.Context) { // Функция для получения 
 	}
 
 	var movie Movies
-	if err := db.First(&movie, id).Error; err == nil {
+	if err := db.First(&movie, id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "movie not found"})
 		return
 	}
-	c.JSON(http.StatusOK, movie)	// Отправляем найденный фильм в формате JSON
+	c.JSON(http.StatusOK, movie) // Отправляем найденный фильм в формате JSON
 
 }
-
 
 func createMovie(c *gin.Context) { // Функция для создания нового фильма
 	// Проверяем, что тело запроса содержит корректные данные
@@ -58,18 +60,18 @@ func createMovie(c *gin.Context) { // Функция для создания н�
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	db.Create(&newMovie) 			 // Создаем новый фильм в базе данных
-	c.JSON(http.StatusCreated, newMovie) 
+	db.Create(&newMovie) // Создаем новый фильм в базе данных
+	c.JSON(http.StatusCreated, newMovie)
 }
 
 func updateMovie(c *gin.Context) { // Функция для обновления фильма
 	id, err := strconv.Atoi(c.Param("id")) // Преобразуем параметр ID из строки в целое число
-	if err != nil { 					  // Если произошла ошибка при преобразовании, отправляем ошибку
+	if err != nil {                        // Если произошла ошибка при преобразовании, отправляем ошибку
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
 		return
 	}
 
-	var movie Movies // Создаем переменную для хранения фильма
+	var movie Movies                                   // Создаем переменную для хранения фильма
 	if err := db.First(&movie, id).Error; err != nil { // Ищем фильм по ID в базе данных
 		c.JSON(http.StatusNotFound, gin.H{"error": "movie not found"})
 		return
@@ -79,10 +81,9 @@ func updateMovie(c *gin.Context) { // Функция для обновления
 		return
 	}
 
-	db.Save(&movie) 			 // Сохраняем обновленный фильм в базе данных
+	db.Save(&movie)              // Сохраняем обновленный фильм в базе данных
 	c.JSON(http.StatusOK, movie) // Отправляем обновленный фильм в формате JSON
 }
-
 
 func deleteMovie(c *gin.Context) { // Функция для удаления фильма
 	id, err := strconv.Atoi(c.Param("id"))
@@ -91,20 +92,20 @@ func deleteMovie(c *gin.Context) { // Функция для удаления ф�
 		return
 	}
 
-	db.Delete(&Movies{}, id) // Удаляем фильм из базы данных
-	c.JSON(http.StatusNoContent) // Отправляем ответ с кодом 204 No Content
+	db.Delete(&Movies{}, id)       // Удаляем фильм из базы данных
+	c.Status(http.StatusNoContent) // Отправляем ответ с кодом 204 No Content
 }
 
 func main() {
-	dsn := "host=localhost user=postgres password=1234 dbname=movies_db port=5432 sslmode=disable"
+	dsn := "host=127.0.0.1 user=postgres password=1234 dbname=movies_db port=5432 sslmode=disable"
 	var err error
-	db, err = qorm.Open(postgres.Open(dsn), &qorm.Config{}
+	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatal("failed to connect database:", err)	
-	})
-	
+		log.Fatal("failed to connect database:", err)
+	}
+
 	db.AutoMigrate(&Movies{}) // Автоматически создаем таблицу Movies в базе данных
-	r := gin.Default() // Создаем новый экземпляр Gin
+	r := gin.Default()        // Создаем новый экземпляр Gin
 
 	r.GET("/ping", pingHandler)          // Регистрация обработчика для /ping
 	r.GET("/movies", moviesHandler)      // Регистрация обработчика для получения списка фильмов
@@ -113,6 +114,6 @@ func main() {
 	r.PUT("/movies/:id", updateMovie)    // Регистрация обработчика для обновления фильма
 	r.DELETE("/movies/:id", deleteMovie) // Регистрация обработчика для удаления фильма
 
-	r.Run(":8080") // Запуск сервера на порту 8080 // Запуск сервера
+	r.Run(":8080") // Запуск сервера на порту 8080
 
 }
