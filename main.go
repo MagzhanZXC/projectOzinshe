@@ -8,7 +8,7 @@ import (
 )
 
 type Movies struct {
-	ID          int    `json:"id"`
+	ID          int    `json:"id qorm:"primary_key"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	Year        int    `json:"year"`
@@ -29,8 +29,9 @@ func pingHandler(c *gin.Context) { // Функция для обработки �
 }
 
 func moviesHandler(c *gin.Context) { // Функция для обработки запроса на /movies
-	// Отправляем список фильмов в формате JSON
-	c.JSON(http.StatusOK, movies)
+	var movies []Movies			   // Создаем срез для хранения фильмов
+	db.Find(&movies)			   // Получаем все фильмы из базы данных
+	c.JSON(http.StatusOK, movies) // Отправляем список фильмов в формате JSON
 }
 
 func getMovieByID(c *gin.Context) { // Функция для получения фильма по ID
@@ -40,52 +41,48 @@ func getMovieByID(c *gin.Context) { // Функция для получения 
 		return
 	}
 
-	for _, movie := range movies { // Перебираем список фильмов
-		if movie.ID == id { // Если ID совпадает, отправляем фильм
-			c.JSON(http.StatusOK, movie) // Отправляем фильм в формате JSON
-			return                       // Возвращаем ответ с фильмом
-		}
+	var movie Movies
+	if err := db.First(&movie, id).Error; err == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "movie not found"})
+		return
 	}
+	c.JSON(http.StatusOK, movie)	// Отправляем найденный фильм в формате JSON
 
-	c.JSON(http.StatusNotFound, gin.H{"message": "movie not found"}) // Отправляем сообщение об ошибке, если фильм не найден
 }
+
 
 func createMovie(c *gin.Context) { // Функция для создания нового фильма
 	// Проверяем, что тело запроса содержит корректные данные
 	var newMovie Movies
 	if err := c.ShouldBindJSON(&newMovie); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	newMovie.ID = len(movies) + 1
-	movies = append(movies, newMovie)
-	c.JSON(http.StatusCreated, newMovie)
+	db.Create(&newMovie) 			 // Создаем новый фильм в базе данных
+	c.JSON(http.StatusCreated, newMovie) 
 }
 
 func updateMovie(c *gin.Context) { // Функция для обновления фильма
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
+	id, err := strconv.Atoi(c.Param("id")) // Преобразуем параметр ID из строки в целое число
+	if err != nil { 					  // Если произошла ошибка при преобразовании, отправляем ошибку
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
 		return
 	}
 
-	var updatedMovie Movies                                 // Исправлено на правильный тип
-	if err := c.ShouldBindJSON(&updatedMovie); err != nil { // Проверяем, что тело запроса содержит корректные данные
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+	var movie Movies // Создаем переменную для хранения фильма
+	if err := db.First(&movie, id).Error; err != nil { // Ищем фильм по ID в базе данных
+		c.JSON(http.StatusNotFound, gin.H{"error": "movie not found"})
+		return
+	}
+	if err := c.ShouldBindJSON(&movie); err != nil { // Проверяем, что тело запроса содержит корректные данные
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) // Отправляем сообщение об ошибке с кодом 400 Bad Request
 		return
 	}
 
-	for i, m := range movies { // Обновляем цикл для поиска по ID
-		if m.ID == id { // Если ID совпадает, обновляем фильм
-			movies[i].Title = updatedMovie.Title
-			movies[i].Description = updatedMovie.Description
-			movies[i].Year = updatedMovie.Year
-			movies[i].PosterURL = updatedMovie.PosterURL
-			c.JSON(http.StatusOK, movies[i])
-			return
-		}
-	}
+	db.Save(&movie) 			 // Сохраняем обновленный фильм в базе данных
+	c.JSON(http.StatusOK, movie) // Отправляем обновленный фильм в формате JSON
 }
+
 
 func deleteMovie(c *gin.Context) { // Функция для удаления фильма
 	id, err := strconv.Atoi(c.Param("id"))
@@ -94,17 +91,19 @@ func deleteMovie(c *gin.Context) { // Функция для удаления ф�
 		return
 	}
 
-	for i, m := range movies {
-		if m.ID == id {
-			movies = append(movies[:i], movies[i+1:]...)             // Удаляем фильм из списка
-			c.JSON(http.StatusOK, gin.H{"message": "movie deleted"}) // Отправляем сообщение об успешном удалении
-			return
-		}
-	}
-	c.JSON(http.StatusNotFound, gin.H{"error": "movie not found"}) // Отправляем сообщение об ошибке, если фильм не найден
+	db.Delete(&Movies{}, id) // Удаляем фильм из базы данных
+	c.JSON(http.StatusNoContent) // Отправляем ответ с кодом 204 No Content
 }
 
 func main() {
+	dsn := "host=localhost user=postgres password=1234 dbname=movies_db port=5432 sslmode=disable"
+	var err error
+	db, err = qorm.Open(postgres.Open(dsn), &qorm.Config{}
+	if err != nil {
+		log.Fatal("failed to connect database:", err)	
+	})
+	
+	db.AutoMigrate(&Movies{}) // Автоматически создаем таблицу Movies в базе данных
 	r := gin.Default() // Создаем новый экземпляр Gin
 
 	r.GET("/ping", pingHandler)          // Регистрация обработчика для /ping
