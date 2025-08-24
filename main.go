@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -97,7 +98,7 @@ func deleteMovie(c *gin.Context) { // Функция для удаления ф�
 }
 
 func main() {
-	dsn := "host=127.0.0.1 user=postgres password=1234 dbname=movies_db port=5432 sslmode=disable"
+	dsn := "host=localhost user=postgres password=1234 dbname=movies_db port=5432 sslmode=disable"
 	var err error
 	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
@@ -115,5 +116,6 @@ func main() {
 	r.DELETE("/movies/:id", deleteMovie) // Регистрация обработчика для удаления фильма
 
 	r.Run(":8080") // Запуск сервера на порту 8080
+	fmt.Println("Server is running on port 8080")
 
 }
