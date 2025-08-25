@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -115,7 +114,6 @@ func main() {
 	r.PUT("/movies/:id", updateMovie)    // Регистрация обработчика для обновления фильма
 	r.DELETE("/movies/:id", deleteMovie) // Регистрация обработчика для удаления фильма
 
-	r.Run(":8080")                                // Запуск сервера на порту 8080
-	fmt.Println("Server is running on port 8080") // Вывод сообщения в консоль, что сервер запущен
+	r.Run(":8080") // Запуск сервера на порту 8080
 
 }
