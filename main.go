@@ -10,22 +10,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type Movies struct {
-	ID          int    `json:"id" gorm:"primary_key"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	Year        int    `json:"year"`
-	PosterURL   string `json:"poster_url"`
-}
-
-var db *gorm.DB // Глобальная переменная для базы данных
-
 func pingHandler(c *gin.Context) { // Функция для обработки запроса на /ping
-	// Отправляем ответ с сообщением "pong"
-	// Используем c.JSON для отправки JSON-ответа
-	// http.StatusOK - это код состояния HTTP 200 OK
-	// gin.H - это сокращение для создания карты (map) с ключами и значениями
-	// В данном случае мы отправляем сообщение "pong"
 	c.JSON(http.StatusOK, gin.H{
 		"message": "pong",
 	})
@@ -97,7 +82,6 @@ func deleteMovie(c *gin.Context) { // Функция для удаления ф�
 }
 
 func main() {
-	dsn := "host=localhost user=postgres password=1234 dbname=movies_db port=5432 sslmode=disable"
 	var err error
 	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
