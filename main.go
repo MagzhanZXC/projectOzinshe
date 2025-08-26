@@ -1,102 +1,22 @@
 package main
 
 import (
-	"log"
-	"net/http"
-	"strconv"
+	"projectOzinshe/config"
+	"projectOzinshe/handlers"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
-func pingHandler(c *gin.Context) { // Функция для обработки запроса на /ping
-	c.JSON(http.StatusOK, gin.H{
-		"message": "pong",
-	})
-}
-
-func moviesHandler(c *gin.Context) { // Функция для обработки запроса на /movies
-	var movies []Movies           // Создаем срез для хранения фильмов
-	db.Find(&movies)              // Получаем все фильмы из базы данных
-	c.JSON(http.StatusOK, movies) // Отправляем список фильмов в формате JSON,
-}
-
-func getMovieByID(c *gin.Context) { // Функция для получения фильма по ID
-	id, err := strconv.Atoi(c.Param("id")) // Преобразуем параметр ID из строки в целое число
-	if err != nil {                        // Если произошла ошибка при преобразовании, отправляем ошибку
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"}) // Отправляем сообщение об ошибке с кодом 400 Bad Request
-		return
-	}
-
-	var movie Movies
-	if err := db.First(&movie, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "movie not found"})
-		return
-	}
-	c.JSON(http.StatusOK, movie) // Отправляем найденный фильм в формате JSON
-
-}
-
-func createMovie(c *gin.Context) { // Функция для создания нового фильма
-	// Проверяем, что тело запроса содержит корректные данные
-	var newMovie Movies
-	if err := c.ShouldBindJSON(&newMovie); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	db.Create(&newMovie) // Создаем новый фильм в базе данных
-	c.JSON(http.StatusCreated, newMovie)
-}
-
-func updateMovie(c *gin.Context) { // Функция для обновления фильма
-	id, err := strconv.Atoi(c.Param("id")) // Преобразуем параметр ID из строки в целое число
-	if err != nil {                        // Если произошла ошибка при преобразовании, отправляем ошибку
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
-		return
-	}
-
-	var movie Movies                                   // Создаем переменную для хранения фильма
-	if err := db.First(&movie, id).Error; err != nil { // Ищем фильм по ID в базе данных
-		c.JSON(http.StatusNotFound, gin.H{"error": "movie not found"})
-		return
-	}
-	if err := c.ShouldBindJSON(&movie); err != nil { // Проверяем, что тело запроса содержит корректные данные
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) // Отправляем сообщение об ошибке с кодом 400 Bad Request
-		return
-	}
-
-	db.Save(&movie)              // Сохраняем обновленный фильм в базе данных
-	c.JSON(http.StatusOK, movie) // Отправляем обновленный фильм в формате JSON
-}
-
-func deleteMovie(c *gin.Context) { // Функция для удаления фильма
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
-		return
-	}
-
-	db.Delete(&Movies{}, id)       // Удаляем фильм из базы данных
-	c.Status(http.StatusNoContent) // Отправляем ответ с кодом 204 No Content
-}
-
 func main() {
-	var err error
-	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		log.Fatal("failed to connect database:", err)
-	}
+	config.ConnectDatabse() // Подключаемся к базе данных
+	r := gin.Default()      // Создаем новый экземпляр Gin
 
-	db.AutoMigrate(&Movies{}) // Автоматически создаем таблицу Movies в базе данных
-	r := gin.Default()        // Создаем новый экземпляр Gin
-
-	r.GET("/ping", pingHandler)          // Регистрация обработчика для /ping
-	r.GET("/movies", moviesHandler)      // Регистрация обработчика для получения списка фильмов
-	r.GET("/movies/:id", getMovieByID)   // Регистрация обработчика для получения фильма по ID
-	r.POST("/movies", createMovie)       // Регистрация обработчика для создания нового фильма
-	r.PUT("/movies/:id", updateMovie)    // Регистрация обработчика для обновления фильма
-	r.DELETE("/movies/:id", deleteMovie) // Регистрация обработчика для удаления фильма
+	r.GET("/ping", handlers.PingHandler)          // Регистрация обработчика для /ping
+	r.GET("/movies", handlers.MoviesHandler)      // Регистрация обработчика для получения списка фильмов
+	r.GET("/movies/:id", handlers.GetMovieByID)   // Регистрация обработчика для получения фильма по ID
+	r.POST("/movies", handlers.CreateMovie)       // Регистрация обработчика для создания нового фильма
+	r.PUT("/movies/:id", handlers.UpdateMovie)    // Регистрация обработчика для обновления фильма
+	r.DELETE("/movies/:id", handlers.DeleteMovie) // Регистрация обработчика для удаления фильма
 
 	r.Run(":8080") // Запуск сервера на порту 8080
 
