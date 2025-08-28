@@ -8,8 +8,8 @@ import (
 )
 
 func main() {
-	config.ConnectDatabse() // Подключаемся к базе данных
-	r := gin.Default()      // Создаем новый экземпляр Gin
+	config.ConnectDatabase() // Подключаемся к базе данных
+	r := gin.Default()       // Создаем новый экземпляр Gin
 
 	r.GET("/ping", handlers.PingHandler)          // Регистрация обработчика для /ping
 	r.GET("/movies", handlers.MoviesHandler)      // Регистрация обработчика для получения списка фильмов
