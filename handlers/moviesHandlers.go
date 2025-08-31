@@ -40,8 +40,8 @@ func GetMovieByID(c *gin.Context) { // Функция для получения 
 
 func CreateMovie(c *gin.Context) { // Функция для создания нового фильма
 	// Проверяем, что тело запроса содержит корректные данные
-	var newMovie models.Movie
-	if err := c.ShouldBindJSON(&newMovie); err != nil {
+	var newMovie models.Movie                           // Создаем переменную для хранения нового фильма
+	if err := c.ShouldBindJSON(&newMovie); err != nil { // Если произошла ошибка при привязке JSON, отправляем ошибку
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
