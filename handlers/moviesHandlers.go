@@ -1,24 +1,33 @@
 package handlers
 
 import (
+	"mime/multipart"
 	"net/http"
-	"strconv"
-
 	"projectOzinshe/config"
 	"projectOzinshe/models"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
 
-type Movie struct {
-	ID          int      `json:"id" gorm:"primary_key"`
-	Title       string   `json:"title"`
-	Description string   `json:"description"`
-	Year        int      `json:"year"`
-	Director    string   `json:"director"`
-	PosterURL   string   `json:"poster_url"`
-	Genres      []string `json:"genres" gorm:"many2many:movie_genres;"`
-	TrailerURL  string   `json:"trailer_url"`
+type createMovieRequest struct { // создание фильма
+	Title       string                `form:"title"` // теги
+	Description string                `form:"description"`
+	ReleaseYear int                   `form:"releaseYear"`
+	Director    string                `form:"director"`
+	TrailerUrl  string                `form:"trailerUrl"`
+	GenreIds    []int                 `form:"genreIds"`
+	Poster      *multipart.FileHeader `form:"poster"`
+}
+
+type updateMovieRequest struct { // обновление фильма
+	Title       string                `form:"title"` // теги
+	Description string                `form:"description"`
+	ReleaseYear int                   `form:"releaseYear"`
+	Director    string                `form:"director"`
+	TrailerUrl  string                `form:"trailerUrl"`
+	GenreIds    []int                 `form:"genreIds"`
+	Poster      *multipart.FileHeader `form:"poster"`
 }
 
 func PingHandler(c *gin.Context) { // Функция для обработки запроса на /ping
