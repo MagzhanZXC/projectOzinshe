@@ -1,102 +1,76 @@
 package handlers
 
 import (
-	"mime/multipart"
+	"errors"
 	"net/http"
-	"projectOzinshe/config"
-	"projectOzinshe/models"
 	"strconv"
+
+	"projectOzinshe/models"
 
 	"github.com/gin-gonic/gin"
 )
 
-type createMovieRequest struct { // создание фильма
-	Title       string                `form:"title"` // теги
-	Description string                `form:"description"`
-	ReleaseYear int                   `form:"releaseYear"`
-	Director    string                `form:"director"`
-	TrailerUrl  string                `form:"trailerUrl"`
-	GenreIds    []int                 `form:"genreIds"`
-	Poster      *multipart.FileHeader `form:"poster"`
+type MoviesHandler struct {
+	db map[int]models.Movie
 }
 
-type updateMovieRequest struct { // обновление фильма
-	Title       string                `form:"title"` // теги
-	Description string                `form:"description"`
-	ReleaseYear int                   `form:"releaseYear"`
-	Director    string                `form:"director"`
-	TrailerUrl  string                `form:"trailerUrl"`
-	GenreIds    []int                 `form:"genreIds"`
-	Poster      *multipart.FileHeader `form:"poster"`
+func NewMoviesHandler() *MoviesHandler {
+	return &MoviesHandler{
+		db: make(map[int]models.Movie),
+	}
 }
 
-func PingHandler(c *gin.Context) { // Функция для обработки запроса на /ping
+func (h *MoviesHandler) Create(c *gin.Context) {
+	var m models.Movie
+	err := c.BindJSON(&m)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.NewApiError(err))
+		return
+	}
+	id := len(h.db) + 1
+
+	m.ID = id
+	m.Genre = make([]models.Genre, 0) // Инициализация среза жанров
+
+	h.db[id] = m
+
 	c.JSON(http.StatusOK, gin.H{
-		"message": "pong",
+		"id": id,
 	})
 }
 
-func MoviesHandler(c *gin.Context) { // Функция для обработки запроса на /movies
-	var movies []models.Movie     // Создаем срез для хранения фильмов
-	config.DB.Find(&movies)       // Получаем все фильмы из базы данных
-	c.JSON(http.StatusOK, movies) // Отправляем список фильмов в формате JSON,
-}
-
-func GetMovieByID(c *gin.Context) { // Функция для получения фильма по ID
-	id, err := strconv.Atoi(c.Param("id")) // Преобразуем параметр ID из строки в целое число
-	if err != nil {                        // Если произошла ошибка при преобразовании, отправляем ошибку
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"}) // Отправляем сообщение об ошибке с кодом 400 Bad Request
-		return
-	}
-
-	var movie models.Movie
-	if err := config.DB.First(&movie, id).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "movie not found"})
-		return
-	}
-	c.JSON(http.StatusOK, movie) // Отправляем найденный фильм в формате JSON
-
-}
-
-func CreateMovie(c *gin.Context) { // Функция для создания нового фильма
-	// Проверяем, что тело запроса содержит корректные данные
-	var newMovie models.Movie                           // Создаем переменную для хранения нового фильма
-	if err := c.ShouldBindJSON(&newMovie); err != nil { // Если произошла ошибка при привязке JSON, отправляем ошибку
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-	config.DB.Create(&newMovie) // Создаем новый фильм в базе данных
-	c.JSON(http.StatusCreated, newMovie)
-}
-
-func UpdateMovie(c *gin.Context) { // Функция для обновления фильма
-	id, err := strconv.Atoi(c.Param("id")) // Преобразуем параметр ID из строки в целое число
-	if err != nil {                        // Если произошла ошибка при преобразовании, отправляем ошибку
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
-		return
-	}
-
-	var movie models.Movie                                    // Создаем переменную для хранения фильма
-	if err := config.DB.First(&movie, id).Error; err != nil { // Ищем фильм по ID в базе данных
-		c.JSON(http.StatusNotFound, gin.H{"error": "movie not found"})
-		return
-	}
-	if err := c.ShouldBindJSON(&movie); err != nil { // Проверяем, что тело запроса содержит корректные данные
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()}) // Отправляем сообщение об ошибке с кодом 400 Bad Request
-		return
-	}
-
-	config.DB.Save(&movie)       // Сохраняем обновленный фильм в базе данных
-	c.JSON(http.StatusOK, movie) // Отправляем обновленный фильм в формате JSON
-}
-
-func DeleteMovie(c *gin.Context) { // Функция для удаления фильма
-	id, err := strconv.Atoi(c.Param("id"))
+func (h *MoviesHandler) Update(c *gin.Context) {
+	idstr := c.Param("id")
+	id, err := strconv.Atoi(idstr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		c.JSON(http.StatusBadRequest, models.NewApiError(errors.New("Invalid movie Id")))
 		return
 	}
 
-	config.DB.Delete(&models.Movie{}, id) // Удаляем фильм из базы данных
-	c.Status(http.StatusNoContent)        // Отправляем ответ с кодом 204 No Content
+	originalMovie, ok := h.db[id]
+	if !ok {
+		c.JSON(http.StatusNotFound, models.NewApiError(errors.New("Movie not found")))
+		return
+	}
+
+	var updateMovie models.Movie
+	err = c.BindJSON(&updateMovie)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.NewApiError(errors.New("Could not bind JSON")))
+		return
+	}
+
+	originalMovie.Title = updateMovie.Title
+	originalMovie.Description = updateMovie.Description
+	originalMovie.ReleaseYear = updateMovie.ReleaseYear
+	originalMovie.Director = updateMovie.Director
+	originalMovie.Rating = updateMovie.Rating
+	originalMovie.IsWatched = updateMovie.IsWatched
+	originalMovie.TrailerURL = updateMovie.TrailerURL
+	//originalMovie.PosterURL = updateMovie.PosterURL
+	//originalMovie.Genres = updateMovie.Genres
+
+	h.db[id] = originalMovie
+
+	c.Status(http.StatusOK)
 }
