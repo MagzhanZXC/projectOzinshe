@@ -18,9 +18,11 @@ func main() {
 	r.Use(cors.New(corsConfig))
 
 	moviesHandler := handlers.NewMoviesHandler()
-
+	r.GET("/movies/:id", moviesHandler.FindByID)
+	r.GET("/movies", moviesHandler.FindAll)
 	r.POST("/movies", moviesHandler.Create)
 	r.PUT("/movies/:id", moviesHandler.Update)
+	r.DELETE("/movies/:id", moviesHandler.Delete)
 
 	r.Run(":8080")
 }
