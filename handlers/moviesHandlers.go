@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"errors"
 	"net/http"
 	"strconv"
 
@@ -24,7 +23,7 @@ func (h *MoviesHandler) Create(c *gin.Context) {
 	var m models.Movie
 	err := c.BindJSON(&m)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, models.NewApiError(err))
+		c.JSON(http.StatusBadRequest, models.NewApiError("Could not bind JSON"))
 		return
 	}
 	id := len(h.db) + 1
@@ -43,20 +42,20 @@ func (h *MoviesHandler) Update(c *gin.Context) {
 	idstr := c.Param("id")
 	id, err := strconv.Atoi(idstr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, models.NewApiError(errors.New("Invalid movie Id")))
+		c.JSON(http.StatusBadRequest, models.NewApiError("Invalid movie ID"))
 		return
 	}
 
 	originalMovie, ok := h.db[id]
 	if !ok {
-		c.JSON(http.StatusNotFound, models.NewApiError(errors.New("Movie not found")))
+		c.JSON(http.StatusNotFound, models.NewApiError("Movie not found"))
 		return
 	}
 
 	var updateMovie models.Movie
 	err = c.BindJSON(&updateMovie)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, models.NewApiError(errors.New("Could not bind JSON")))
+		c.JSON(http.StatusBadRequest, models.NewApiError("Could not bind JSON"))
 		return
 	}
 
