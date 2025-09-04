@@ -13,11 +13,20 @@ type MoviesHandler struct {
 	db map[int]models.Movie
 }
 
+type createMovieRequest struct {
+	Title       string
+	Description string
+	ReleaseYear int
+	Director    string
+	TrailerUrl  string
+	GenreIds    []int
+}
+
 func NewMoviesHandler() *MoviesHandler {
 	return &MoviesHandler{
 		db: map[int]models.Movie{
 			1: {
-				ID:          1,
+				Id:          1,
 				Title:       "Вверх",
 				Description: "Мультфильм о приключениях старика Карла и мальчика Рассела.",
 				ReleaseYear: 2009,
@@ -26,10 +35,10 @@ func NewMoviesHandler() *MoviesHandler {
 				IsWatched:   false,
 				TrailerURL:  "https://www.youtube.com/watch?v=ORFWdXl_zJ4",
 				PosterURL:   "",
-				Genre:       make([]models.Genre, 0),
+				Genres:      make([]models.Genre, 0),
 			},
 			2: {
-				ID:          2,
+				Id:          2,
 				Title:       "Тачки",
 				Description: "Фильм о гонках автомобилей и дружбе.",
 				ReleaseYear: 2006,
@@ -38,10 +47,10 @@ func NewMoviesHandler() *MoviesHandler {
 				IsWatched:   false,
 				TrailerURL:  "https://www.youtube.com/watch?v=zSWdZVtXT7E",
 				PosterURL:   "",
-				Genre:       make([]models.Genre, 0),
+				Genres:      make([]models.Genre, 0),
 			},
 			3: {
-				ID:          3,
+				Id:          3,
 				Title:       "Король Лев",
 				Description: "Анимационный фильм о львенке Симбе и его приключениях.",
 				ReleaseYear: 1994,
@@ -50,7 +59,7 @@ func NewMoviesHandler() *MoviesHandler {
 				IsWatched:   false,
 				TrailerURL:  "https://www.youtube.com/watch?v=4sj1MT05lAA",
 				PosterURL:   "",
-				Genre:       make([]models.Genre, 0),
+				Genres:      make([]models.Genre, 0),
 			},
 		},
 	}
@@ -83,21 +92,27 @@ func (h *MoviesHandler) FindByID(c *gin.Context) {
 }
 
 func (h *MoviesHandler) Create(c *gin.Context) {
-	var m models.Movie
-	err := c.BindJSON(&m)
+	var request createMovieRequest
+
+	err := c.BindJSON(&request)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, models.NewApiError("Could not bind JSON"))
 		return
 	}
-	id := len(h.db) + 1
+	movie := models.Movie{
+		Id:          len(h.db) + 1,
+		Title:       request.Title,
+		Description: request.Description,
+		ReleaseYear: request.ReleaseYear,
+		Director:    request.Director,
+		TrailerURL:  request.TrailerUrl,
+		Genres:      make([]models.Genre, 0),
+	}
 
-	m.ID = id
-	m.Genre = make([]models.Genre, 0) // Инициализация среза жанров
-
-	h.db[id] = m
+	h.db[movie.Id] = movie
 
 	c.JSON(http.StatusOK, gin.H{
-		"id": id,
+		"id": movie.Id,
 	})
 }
 

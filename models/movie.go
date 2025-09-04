@@ -1,7 +1,7 @@
 package models
 
 type Movie struct {
-	ID          int
+	Id          int
 	Title       string
 	Description string
 	ReleaseYear int
@@ -10,5 +10,5 @@ type Movie struct {
 	IsWatched   bool
 	TrailerURL  string
 	PosterURL   string
-	Genre       []Genre
+	Genres      []Genre
 }
