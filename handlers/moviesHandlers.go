@@ -11,8 +11,8 @@ import (
 )
 
 type MoviesHandler struct {
-	db        map[int]models.Movie // to be removed
-	genreRepo *repositories.GenresRepository
+	moviesRepo *repositories.MoviesRepository
+	genresRepo *repositories.GenresRepository
 }
 
 type createMovieRequest struct {
@@ -33,57 +33,13 @@ type updateMovieRequest struct {
 	GenreIds    []int
 }
 
-func NewMoviesHandler(genreRepo *repositories.GenresRepository) *MoviesHandler {
+func NewMoviesHandler(
+	moviesRepo *repositories.MoviesRepository,
+	genreRepo *repositories.GenresRepository) *MoviesHandler {
 	return &MoviesHandler{
-		db: map[int]models.Movie{
-			1: {
-				Id:          1,
-				Title:       "Вверх",
-				Description: "Мультфильм о приключениях старика Карла и мальчика Рассела.",
-				ReleaseYear: 2009,
-				Director:    "Пит Доктер",
-				Rating:      0,
-				IsWatched:   false,
-				TrailerURL:  "https://www.youtube.com/watch?v=ORFWdXl_zJ4",
-				PosterURL:   "",
-				Genres:      make([]models.Genre, 0),
-			},
-			2: {
-				Id:          2,
-				Title:       "Тачки",
-				Description: "Фильм о гонках автомобилей и дружбе.",
-				ReleaseYear: 2006,
-				Director:    "Дэн Скэнлон",
-				Rating:      0,
-				IsWatched:   false,
-				TrailerURL:  "https://www.youtube.com/watch?v=zSWdZVtXT7E",
-				PosterURL:   "",
-				Genres:      make([]models.Genre, 0),
-			},
-			3: {
-				Id:          3,
-				Title:       "Король Лев",
-				Description: "Анимационный фильм о львенке Симбе и его приключениях.",
-				ReleaseYear: 1994,
-				Director:    "Роджер Аллерс",
-				Rating:      0,
-				IsWatched:   false,
-				TrailerURL:  "https://www.youtube.com/watch?v=4sj1MT05lAA",
-				PosterURL:   "",
-				Genres:      make([]models.Genre, 0),
-			},
-		},
-		genreRepo: genreRepo,
+		moviesRepo: moviesRepo,
+		genresRepo: genreRepo,
 	}
-}
-
-func (h *MoviesHandler) FindAll(c *gin.Context) {
-	movies := make([]models.Movie, 0, len(h.db))
-	for _, movie := range h.db {
-		movies = append(movies, movie)
-	}
-
-	c.JSON(http.StatusOK, movies)
 }
 
 func (h *MoviesHandler) FindByID(c *gin.Context) {
@@ -94,13 +50,19 @@ func (h *MoviesHandler) FindByID(c *gin.Context) {
 		return
 	}
 
-	movie, ok := h.db[id]
-	if !ok {
-		c.JSON(http.StatusNotFound, models.NewApiError("Movie not found"))
+	movie, err := h.moviesRepo.FindById(c, id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, models.NewApiError(err.Error()))
 		return
 	}
 
 	c.JSON(http.StatusOK, movie)
+}
+
+func (h *MoviesHandler) FindAll(c *gin.Context) {
+	movies := h.moviesRepo.FindAll(c)
+
+	c.JSON(http.StatusOK, movies)
 }
 
 func (h *MoviesHandler) Create(c *gin.Context) {
@@ -112,10 +74,9 @@ func (h *MoviesHandler) Create(c *gin.Context) {
 		return
 	}
 
-	genres := h.genreRepo.FindAllByIds(c, request.GenreIds)
+	genres := h.genresRepo.FindAllByIds(c, request.GenreIds)
 
 	movie := models.Movie{
-		Id:          len(h.db) + 1,
 		Title:       request.Title,
 		Description: request.Description,
 		ReleaseYear: request.ReleaseYear,
@@ -124,10 +85,10 @@ func (h *MoviesHandler) Create(c *gin.Context) {
 		Genres:      genres,
 	}
 
-	h.db[movie.Id] = movie
+	id := h.moviesRepo.Create(c, movie)
 
 	c.JSON(http.StatusOK, gin.H{
-		"id": movie.Id,
+		"id": id,
 	})
 }
 
@@ -139,9 +100,10 @@ func (h *MoviesHandler) Update(c *gin.Context) {
 		return
 	}
 
-	originalMovie, ok := h.db[id]
-	if !ok {
-		c.JSON(http.StatusNotFound, models.NewApiError("Movie not found"))
+	_, err = h.moviesRepo.FindById(c, id)
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, models.NewApiError(err.Error()))
 		return
 	}
 
@@ -152,16 +114,16 @@ func (h *MoviesHandler) Update(c *gin.Context) {
 		return
 	}
 
-	genres := h.genreRepo.FindAllByIds(c, request.GenreIds)
-
-	originalMovie.Title = request.Title
-	originalMovie.Description = request.Description
-	originalMovie.ReleaseYear = request.ReleaseYear
-	originalMovie.Director = request.Director
-	originalMovie.TrailerURL = request.TrailerUrl
-	originalMovie.Genres = genres
-
-	h.db[id] = originalMovie
+	genres := h.genresRepo.FindAllByIds(c, request.GenreIds)
+	movie := models.Movie{
+		Title:       request.Title,
+		Description: request.Description,
+		ReleaseYear: request.ReleaseYear,
+		Director:    request.Director,
+		TrailerURL:  request.TrailerUrl,
+		Genres:      genres,
+	}
+	h.moviesRepo.Update(c, id, movie)
 
 	c.Status(http.StatusOK)
 }
@@ -173,7 +135,13 @@ func (h *MoviesHandler) Delete(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, models.NewApiError("Invalid movie ID"))
 		return
 	}
+	_, err = h.moviesRepo.FindById(c, id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, models.NewApiError(err.Error()))
+		return
+	}
 
-	delete(h.db, id)
+	h.moviesRepo.Delete(c, id)
+
 	c.Status(http.StatusOK)
 }

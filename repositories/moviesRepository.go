@@ -68,3 +68,28 @@ func (r *MoviesRepository) FindAll(c context.Context) []models.Movie {
 	}
 	return movies
 }
+
+func (r *MoviesRepository) Create(c context.Context, movie models.Movie) int {
+	id := len(r.db) + 1
+	movie.Id = id
+
+	r.db[id] = movie
+	return id
+}
+
+func (r *MoviesRepository) Update(c context.Context, id int, updatedMovie models.Movie) {
+	originalMovie := r.db[id]
+
+	originalMovie.Title = updatedMovie.Title
+	originalMovie.Description = updatedMovie.Description
+	originalMovie.ReleaseYear = updatedMovie.ReleaseYear
+	originalMovie.Director = updatedMovie.Director
+	originalMovie.TrailerURL = updatedMovie.TrailerURL
+	originalMovie.Genres = updatedMovie.Genres
+
+	r.db[id] = originalMovie
+}
+
+func (r *MoviesRepository) Delete(c context.Context, id int) {
+	delete(r.db, id)
+}

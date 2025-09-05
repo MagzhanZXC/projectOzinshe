@@ -11,3 +11,5 @@ func NewGenresHandler() *GenresHandler {
 		db: make(map[int]models.Genre),
 	}
 }
+
+//реализовать методы для работы с жанрами

@@ -19,8 +19,9 @@ func main() {
 	}
 	r.Use(cors.New(corsConfig))
 
+	moviesRepository := repositories.NewMoviesRepository()
 	genresRepository := repositories.NewGenresRepository()
-	moviesHandler := handlers.NewMoviesHandler(genresRepository)
+	moviesHandler := handlers.NewMoviesHandler(moviesRepository, genresRepository)
 
 	r.GET("/movies/:id", moviesHandler.FindByID)
 	r.GET("/movies", moviesHandler.FindAll)
