@@ -5,12 +5,14 @@ import (
 	"strconv"
 
 	"projectOzinshe/models"
+	repositories "projectOzinshe/repositories"
 
 	"github.com/gin-gonic/gin"
 )
 
 type MoviesHandler struct {
-	db map[int]models.Movie
+	db        map[int]models.Movie // to be removed
+	genreRepo *repositories.GenresRepository
 }
 
 type createMovieRequest struct {
@@ -22,7 +24,16 @@ type createMovieRequest struct {
 	GenreIds    []int
 }
 
-func NewMoviesHandler() *MoviesHandler {
+type updateMovieRequest struct {
+	Title       string
+	Description string
+	ReleaseYear int
+	Director    string
+	TrailerUrl  string
+	GenreIds    []int
+}
+
+func NewMoviesHandler(genreRepo *repositories.GenresRepository) *MoviesHandler {
 	return &MoviesHandler{
 		db: map[int]models.Movie{
 			1: {
@@ -62,6 +73,7 @@ func NewMoviesHandler() *MoviesHandler {
 				Genres:      make([]models.Genre, 0),
 			},
 		},
+		genreRepo: genreRepo,
 	}
 }
 
@@ -99,6 +111,9 @@ func (h *MoviesHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, models.NewApiError("Could not bind JSON"))
 		return
 	}
+
+	genres := h.genreRepo.FindAllByIds(c, request.GenreIds)
+
 	movie := models.Movie{
 		Id:          len(h.db) + 1,
 		Title:       request.Title,
@@ -106,7 +121,7 @@ func (h *MoviesHandler) Create(c *gin.Context) {
 		ReleaseYear: request.ReleaseYear,
 		Director:    request.Director,
 		TrailerURL:  request.TrailerUrl,
-		Genres:      make([]models.Genre, 0),
+		Genres:      genres,
 	}
 
 	h.db[movie.Id] = movie
@@ -130,22 +145,21 @@ func (h *MoviesHandler) Update(c *gin.Context) {
 		return
 	}
 
-	var updateMovie models.Movie
-	err = c.BindJSON(&updateMovie)
+	var request updateMovieRequest
+	err = c.BindJSON(&request)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, models.NewApiError("Could not bind JSON"))
 		return
 	}
 
-	originalMovie.Title = updateMovie.Title
-	originalMovie.Description = updateMovie.Description
-	originalMovie.ReleaseYear = updateMovie.ReleaseYear
-	originalMovie.Director = updateMovie.Director
-	originalMovie.Rating = updateMovie.Rating
-	originalMovie.IsWatched = updateMovie.IsWatched
-	originalMovie.TrailerURL = updateMovie.TrailerURL
-	//originalMovie.PosterURL = updateMovie.PosterURL
-	//originalMovie.Genres = updateMovie.Genres
+	genres := h.genreRepo.FindAllByIds(c, request.GenreIds)
+
+	originalMovie.Title = request.Title
+	originalMovie.Description = request.Description
+	originalMovie.ReleaseYear = request.ReleaseYear
+	originalMovie.Director = request.Director
+	originalMovie.TrailerURL = request.TrailerUrl
+	originalMovie.Genres = genres
 
 	h.db[id] = originalMovie
 
