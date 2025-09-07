@@ -9,19 +9,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type GenresHandler struct {
+type GenreHandlers struct {
 	repo *repositories.GenresRepository
 }
 
-func NewGenresHandler(repo *repositories.GenresRepository) *GenresHandler {
-	return &GenresHandler{
+func NewGenreHandlers(repo *repositories.GenresRepository) *GenreHandlers {
+	return &GenreHandlers{
 		repo: repo,
 	}
 }
 
 // реализовать методы для работы с жанрами
 
-func (h *GenresHandler) FindById(c *gin.Context) {
+func (h *GenreHandlers) FindById(c *gin.Context) {
 	idstr := c.Param("id")         // получение id из параметров запроса
 	id, err := strconv.Atoi(idstr) // преобразование id в int
 	if err != nil {                // если ошибка преобразования
@@ -38,14 +38,14 @@ func (h *GenresHandler) FindById(c *gin.Context) {
 	// получение жанра по id
 }
 
-func (h *GenresHandler) FindAll(c *gin.Context) {
+func (h *GenreHandlers) FindAll(c *gin.Context) {
 	genres := h.repo.FindAll(c)
 
 	c.JSON(http.StatusOK, genres)
 	// получить все жанры
 }
 
-func (h *GenresHandler) Create(c *gin.Context) {
+func (h *GenreHandlers) Create(c *gin.Context) {
 	var g models.Genre
 	err := c.BindJSON(&g)
 	if err != nil {
@@ -61,7 +61,7 @@ func (h *GenresHandler) Create(c *gin.Context) {
 	// создание жанра
 }
 
-func (h *GenresHandler) Update(c *gin.Context) {
+func (h *GenreHandlers) Update(c *gin.Context) {
 	idstr := c.Param("id")
 	id, err := strconv.Atoi(idstr)
 	if err != nil {
@@ -88,7 +88,7 @@ func (h *GenresHandler) Update(c *gin.Context) {
 	// обновление жанра
 }
 
-func (h *GenresHandler) Delete(c *gin.Context) {
+func (h *GenreHandlers) Delete(c *gin.Context) {
 	idstr := c.Param("id")
 	id, err := strconv.Atoi(idstr)
 	if err != nil {

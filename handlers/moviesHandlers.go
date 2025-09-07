@@ -42,7 +42,7 @@ func NewMoviesHandler(
 	}
 }
 
-func (h *MoviesHandler) FindByID(c *gin.Context) {
+func (h *MoviesHandler) FindById(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {

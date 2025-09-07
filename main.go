@@ -2,7 +2,6 @@ package main
 
 import (
 	"projectOzinshe/handlers"
-
 	"projectOzinshe/repositories"
 
 	"github.com/gin-contrib/cors"
@@ -20,10 +19,14 @@ func main() {
 	r.Use(cors.New(corsConfig))
 
 	moviesRepository := repositories.NewMoviesRepository()
-	genresRepository := repositories.NewGenresRepository()
-	moviesHandler := handlers.NewMoviesHandler(moviesRepository, genresRepository)
+	genresRepostiroy := repositories.NewGenresRepository()
+	moviesHandler := handlers.NewMoviesHandler(
+		moviesRepository,
+		genresRepostiroy,
+	)
+	genresHandler := handlers.NewGenreHandlers(genresRepostiroy)
 
-	r.GET("/movies/:id", moviesHandler.FindByID)
+	r.GET("/movies/:id", moviesHandler.FindById)
 	r.GET("/movies", moviesHandler.FindAll)
 	r.POST("/movies", moviesHandler.Create)
 	r.PUT("/movies/:id", moviesHandler.Update)
