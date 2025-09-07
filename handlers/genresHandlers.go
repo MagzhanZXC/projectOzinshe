@@ -47,7 +47,7 @@ func (h *GenresHandler) FindAll(c *gin.Context) {
 
 func (h *GenresHandler) Create(c *gin.Context) {
 	var g models.Genre
-	err := c.Bind.JSON(&g)
+	err := c.BindJSON(&g)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, "Invalid request payload")
 		return
@@ -69,7 +69,7 @@ func (h *GenresHandler) Update(c *gin.Context) {
 		return
 	}
 
-	_, err = h.repo.FindAllById(c, id)
+	_, err = h.repo.FindById(c, id)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, models.NewApiError(err.Error()))
 		return
@@ -82,11 +82,9 @@ func (h *GenresHandler) Update(c *gin.Context) {
 		return
 	}
 
-	h.repo.Update(c, id, updatedGenre)
+	h.repo.Update(c, updatedGenre)
 
-	c.JSON(http.StatusOK, gin.H{
-		"status": "updated",
-	})
+	c.Status(http.StatusOK)
 	// обновление жанра
 }
 

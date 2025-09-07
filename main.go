@@ -29,5 +29,11 @@ func main() {
 	r.PUT("/movies/:id", moviesHandler.Update)
 	r.DELETE("/movies/:id", moviesHandler.Delete)
 
+	r.GET("/genres/:id", genresHandler.FindById)
+	r.GET("/genres", genresHandler.FindAll)
+	r.POST("/genres", genresHandler.Create)
+	r.PUT("/genres/:id", genresHandler.Update)
+	r.DELETE("/genres/:id", genresHandler.Delete)
+
 	r.Run(":8080")
 }
