@@ -82,7 +82,7 @@ func (h *GenreHandlers) Update(c *gin.Context) {
 		return
 	}
 
-	h.repo.Update(c, updatedGenre)
+	h.repo.Update(c, id, updatedGenre)
 
 	c.Status(http.StatusOK)
 	// обновление жанра

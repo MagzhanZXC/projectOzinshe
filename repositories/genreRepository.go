@@ -59,10 +59,10 @@ func (r *GenresRepository) Create(c context.Context, genre models.Genre) int {
 	return id
 }
 
-func (r *GenresRepository) Update(c context.Context, genre models.Genre) error {
-	original := r.db[genre.Id]
+func (r *GenresRepository) Update(c context.Context, id int, genre models.Genre) error {
+	original := r.db[id]
 	original.Title = genre.Title
-	r.db[genre.Id] = original
+	r.db[id] = original
 	return nil
 }
 func (r *GenresRepository) Delete(c context.Context, id int) error {
