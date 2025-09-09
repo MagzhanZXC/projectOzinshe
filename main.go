@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
 	"projectOzinshe/handlers"
 	"projectOzinshe/repositories"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/spf13/viper"
 )
 
 func main() {
@@ -18,13 +21,18 @@ func main() {
 	}
 	r.Use(cors.New(corsConfig))
 
+	_, err := connectToDb()
+	if err != nil {
+		panic(err)
+	}
+
 	moviesRepository := repositories.NewMoviesRepository()
-	genresRepostiroy := repositories.NewGenresRepository()
+	genresRepository := repositories.NewGenresRepository()
 	moviesHandler := handlers.NewMoviesHandler(
 		moviesRepository,
-		genresRepostiroy,
+		genresRepository,
 	)
-	genresHandler := handlers.NewGenreHandlers(genresRepostiroy)
+	genresHandler := handlers.NewGenreHandlers(genresRepository)
 
 	r.GET("/movies/:id", moviesHandler.FindById)
 	r.GET("/movies", moviesHandler.FindAll)
@@ -39,4 +47,27 @@ func main() {
 	r.DELETE("/genres/:id", genresHandler.Delete)
 
 	r.Run(":8080")
+}
+
+func loadConfig() error {
+	viper.SetConfigFile(".env")
+	err := viper.ReadInConfig()
+	if err != nil {
+		return err
+	}
+	return nil
+
+}
+
+func connectToDb() (*pgxpool.Pool, error) {
+	conn, err := pgxpool.New(context.Background(), "postgres://postgres:postgres@localhost:5432/postgres")
+	if err != nil {
+		return nil, err
+	}
+
+	err = conn.Ping(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	return conn, nil
 }
