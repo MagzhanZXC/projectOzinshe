@@ -2,71 +2,96 @@ package repositories
 
 import (
 	"context"
-	"errors"
 	"projectOzinshe/models"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type GenresRepository struct {
-	db map[int]models.Genre // to be removed
-
+	db *pgxpool.Pool
 }
 
-func NewGenresRepository() *GenresRepository {
-	return &GenresRepository{
-		db: map[int]models.Genre{
-			1: {Id: 1, Title: "Комедия"},
-			2: {Id: 2, Title: "Мультфильм"},
-			3: {Id: 3, Title: "Приключения"},
-		},
-	}
+func NewGenresRepository(conn *pgxpool.Pool) *GenresRepository {
+	return &GenresRepository{db: conn}
 }
 
 func (r *GenresRepository) FindById(c context.Context, id int) (models.Genre, error) { // получение жанра по id
-	genre, ok := r.db[id]
-	if !ok {
-		return models.Genre{}, errors.New("genre not found")
-	}
+	var genre models.Genre
+	row := r.db.QueryRow(c, "select id, title from genres where id = $1", id)
+	err := row.Scan(&genre.Id, &genre.Title)
 
+	if err != nil {
+		return models.Genre{}, err
+	}
 	return genre, nil
 }
 
-func (r *GenresRepository) FindAll(c context.Context) []models.Genre { // получить все жанры
-	genres := make([]models.Genre, 0, len(r.db))
-	for _, v := range r.db {
-		genres = append(genres, v)
+func (r *GenresRepository) FindAll(c context.Context) ([]models.Genre, error) { // получить все жанры
+	rows, err := r.db.Query(c, "select id, title from genres")
+	defer rows.Close()
+	if err != nil {
+		return nil, err
 	}
 
-	return genres
-}
+	genres := make([]models.Genre, 0)
 
-func (r *GenresRepository) FindAllByIds(c context.Context, ids []int) []models.Genre {
-	genres := make([]models.Genre, 0, len(r.db))
-	for _, v := range r.db {
-		for _, id := range ids {
-			if v.Id == id {
-				genres = append(genres, v)
-			}
+	for rows.Next() {
+		var genre models.Genre
+		err := rows.Scan(&genre.Id, &genre.Title)
+		if err != nil {
+			return nil, err
 		}
+		genres = append(genres, genre)
 	}
 
-	return genres
+	return genres, nil
 }
 
-func (r *GenresRepository) Create(c context.Context, genre models.Genre) int {
-	id := len(r.db) + 1
-	genre.Id = id
-	r.db[id] = genre
-	return id
+func (r *GenresRepository) FindAllByIds(c context.Context, ids []int) ([]models.Genre, error) { // получение жанров по массиву id
+	rows, err := r.db.Query(c, "select id, title from genres where id = any($1)", ids)
+	defer rows.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	genres := make([]models.Genre, 0)
+
+	for rows.Next() {
+		var genre models.Genre
+		err := rows.Scan(&genre.Id, &genre.Title)
+		if err != nil {
+			return nil, err
+		}
+		genres = append(genres, genre)
+	}
+
+	return genres, nil
+}
+
+func (r *GenresRepository) Create(c context.Context, genre models.Genre) (int, error) {
+	// insert into movies (title) value ($1) returning id
+	var id int
+	row := r.db.QueryRow(c, "insert into genres (title) values ($1) returning id", genre.Title)
+	err := row.Scan(&id)
+	if err != nil {
+		return 0, nil
+	}
+	return id, nil
 }
 
 func (r *GenresRepository) Update(c context.Context, id int, genre models.Genre) error {
-	original := r.db[id]
-	original.Title = genre.Title
-	r.db[id] = original
+	_, err := r.db.Exec(c, "update genres set title = $1 where id = $2", genre.Title, genre.Id)
+	if err != nil {
+		return err
+	}
 	return nil
 }
+
 func (r *GenresRepository) Delete(c context.Context, id int) error {
-	delete(r.db, id)
+	_, err := r.db.Exec(c, "delete from genres where id = $1", id)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

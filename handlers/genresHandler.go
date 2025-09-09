@@ -39,7 +39,11 @@ func (h *GenreHandlers) FindById(c *gin.Context) {
 }
 
 func (h *GenreHandlers) FindAll(c *gin.Context) {
-	genres := h.repo.FindAll(c)
+	genres, err := h.repo.FindAll(c)
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return
+	}
 
 	c.JSON(http.StatusOK, genres)
 	// получить все жанры
@@ -53,7 +57,11 @@ func (h *GenreHandlers) Create(c *gin.Context) {
 		return
 	}
 
-	id := h.repo.Create(c, g)
+	id, err := h.repo.Create(c, g)
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"id": id,
@@ -82,7 +90,11 @@ func (h *GenreHandlers) Update(c *gin.Context) {
 		return
 	}
 
-	h.repo.Update(c, id, updatedGenre)
+	err = h.repo.Update(c, id, updatedGenre)
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return
+	}
 
 	c.Status(http.StatusOK)
 	// обновление жанра
@@ -102,7 +114,11 @@ func (h *GenreHandlers) Delete(c *gin.Context) {
 		return
 	}
 
-	h.repo.Delete(c, id)
+	err = h.repo.Delete(c, id)
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return
+	}
 
 	c.Status(http.StatusOK)
 	// удаление жанра

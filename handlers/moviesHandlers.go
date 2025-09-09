@@ -74,7 +74,11 @@ func (h *MoviesHandler) Create(c *gin.Context) {
 		return
 	}
 
-	genres := h.genresRepo.FindAllByIds(c, request.GenreIds)
+	genres, err := h.genresRepo.FindAllByIds(c, request.GenreIds)
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return
+	}
 
 	movie := models.Movie{
 		Title:       request.Title,
@@ -114,7 +118,11 @@ func (h *MoviesHandler) Update(c *gin.Context) {
 		return
 	}
 
-	genres := h.genresRepo.FindAllByIds(c, request.GenreIds)
+	genres, err := h.genresRepo.FindAllByIds(c, request.GenreIds)
+	if err != nil {
+		c.Status(http.StatusInternalServerError)
+		return
+	}
 	movie := models.Movie{
 		Title:       request.Title,
 		Description: request.Description,
