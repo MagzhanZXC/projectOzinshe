@@ -2,94 +2,253 @@ package repositories
 
 import (
 	"context"
-	"errors"
+
 	"projectOzinshe/models"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type MoviesRepository struct {
-	db map[int]models.Movie // to be removed
+	db *pgxpool.Pool
 }
 
-func NewMoviesRepository() *MoviesRepository {
-	return &MoviesRepository{
-		db: map[int]models.Movie{
-			1: {
-				Id:          1,
-				Title:       "Вверх",
-				Description: "Мультфильм о приключениях старика Карла и мальчика Рассела.",
-				ReleaseYear: 2009,
-				Director:    "Пит Доктер",
-				Rating:      0,
-				IsWatched:   false,
-				TrailerURL:  "https://www.youtube.com/watch?v=ORFWdXl_zJ4",
-				PosterURL:   "",
-				Genres:      make([]models.Genre, 0),
-			},
-			2: {
-				Id:          2,
-				Title:       "Тачки",
-				Description: "Фильм о гонках автомобилей и дружбе.",
-				ReleaseYear: 2006,
-				Director:    "Дэн Скэнлон",
-				Rating:      0,
-				IsWatched:   false,
-				TrailerURL:  "https://www.youtube.com/watch?v=zSWdZVtXT7E",
-				PosterURL:   "",
-				Genres:      make([]models.Genre, 0),
-			},
-			3: {
-				Id:          3,
-				Title:       "Король Лев",
-				Description: "Анимационный фильм о львенке Симбе и его приключениях.",
-				ReleaseYear: 1994,
-				Director:    "Роджер Аллерс",
-				Rating:      0,
-				IsWatched:   false,
-				TrailerURL:  "https://www.youtube.com/watch?v=4sj1MT05lAA",
-				PosterURL:   "",
-				Genres:      make([]models.Genre, 0),
-			},
-		},
-	}
+func NewMoviesRepository(conn *pgxpool.Pool) *MoviesRepository {
+	return &MoviesRepository{db: conn}
 }
 
 func (r *MoviesRepository) FindById(c context.Context, id int) (models.Movie, error) {
-	movie, ok := r.db[id]
-	if !ok {
-		return models.Movie{}, errors.New("Movie not found")
+	sql :=
+		`
+select
+m.id,
+m.title,
+m.description,
+m.release_year,
+m.director,
+m.rating,
+m.is_watched,
+m.trailer_url,
+g.id,
+g.title
+from  movies m 
+join movies_genres mg on mg.movie_id = m.id
+join genres g on mg.genre_id = g.id
+where m.id = $1
+
+	`
+	rows, err := r.db.Query(c, sql, id)
+	defer rows.Close()
+	if err != nil {
+		return models.Movie{}, err
 	}
-	return movie, nil
-}
 
-func (r *MoviesRepository) FindAll(c context.Context) []models.Movie {
-	movies := make([]models.Movie, 0, len(r.db))
-	for _, movie := range r.db {
-		movies = append(movies, movie)
+	var movie *models.Movie
+
+	for rows.Next() {
+		var m models.Movie
+		var g models.Genre
+
+		err := rows.Scan(
+			&m.Id,
+			&m.Title,
+			&m.Description,
+			&m.ReleaseYear,
+			&m.Director,
+			&m.Rating,
+			&m.IsWatched,
+			&m.TrailerURL,
+			&g.Id,
+			&g.Title,
+		)
+		if err != nil {
+			return models.Movie{}, err
+		}
+
+		if movie != nil {
+			m = *movie
+		}
+		m.Genres = append(m.Genres, g)
+		movie = &m
 	}
-	return movies
+	err = rows.Err()
+	if err != nil {
+		return models.Movie{}, err
+	}
+	return *movie, nil
 }
 
-func (r *MoviesRepository) Create(c context.Context, movie models.Movie) int {
-	id := len(r.db) + 1
-	movie.Id = id
+func (r *MoviesRepository) FindAll(c context.Context) ([]models.Movie, error) {
+	sql :=
+		`
+select
+m.id,
+m.title,
+m.description,
+m.release_year,
+m.director,
+m.rating,
+m.is_watched,
+m.trailer_url,
+g.id,
+g.title
+from  movies m 
+join movies_genres mg on mg.movie_id = m.id
+join genres g on mg.genre_id = g.id
+where m.id = $1
 
-	r.db[id] = movie
-	return id
+	`
+	rows, err := r.db.Query(c, sql)
+	if err != nil {
+		return nil, err
+	}
+	movies := make([]*models.Movie, 0)
+	moviesMap := make(map[int]*models.Movie)
+
+	for rows.Next() {
+		var m models.Movie
+		var g models.Genre
+
+		err := rows.Scan(
+			&m.Id,
+			&m.Title,
+			&m.Description,
+			&m.ReleaseYear,
+			&m.Director,
+			&m.Rating,
+			&m.IsWatched,
+			&m.TrailerURL,
+			&g.Id,
+			&g.Title,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if _, exists := moviesMap[m.Id]; exists {
+			moviesMap[m.Id] = &m
+			movies = append(movies, &m)
+		}
+
+		moviesMap[m.Id].Genres = append(moviesMap[m.Id].Genres, g)
+
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+
+	concreteMovies := make([]models.Movie, 0, len(movies))
+
+	for _, v := range movies {
+		concreteMovies = append(concreteMovies, *v)
+	}
+
+	return concreteMovies, nil
 }
 
-func (r *MoviesRepository) Update(c context.Context, id int, updatedMovie models.Movie) {
-	originalMovie := r.db[id]
+func (r *MoviesRepository) Create(c context.Context, movie models.Movie) (int, error) {
+	var id int
+	row := r.db.QueryRow(c,
+		`
+		insert into movies (title, description, release_year, director, trailer_url)
+		values ($1, $2, $3, $4, $5) 
+		returning id
+		`,
+		movie.Title,
+		movie.Description,
+		movie.ReleaseYear,
+		movie.Director,
+		movie.TrailerURL,
+	)
 
-	originalMovie.Title = updatedMovie.Title
-	originalMovie.Description = updatedMovie.Description
-	originalMovie.ReleaseYear = updatedMovie.ReleaseYear
-	originalMovie.Director = updatedMovie.Director
-	originalMovie.TrailerURL = updatedMovie.TrailerURL
-	originalMovie.Genres = updatedMovie.Genres
+	err := row.Scan(&id)
+	if err != nil {
+		return 0, err
+	}
 
-	r.db[id] = originalMovie
+	for _, genre := range movie.Genres {
+		_, err := r.db.Exec(c,
+			`
+			insert into movies_genres (movie_id, genre_id)
+			values ($1, $2)
+			`,
+			id,
+			genre.Id,
+		)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return id, nil
 }
 
-func (r *MoviesRepository) Delete(c context.Context, id int) {
-	delete(r.db, id)
+func (r *MoviesRepository) Update(c context.Context, id int, updatedMovie models.Movie) error {
+	_, err := r.db.Exec(
+		c,
+		`
+		update movies 
+		set
+		 title = $1,
+		 description = $2,
+		 release_year = $3,
+		 director = $4,
+		 trailer_url = $5
+		 where id = $6
+		`,
+		updatedMovie.Title,
+		updatedMovie.Description,
+		updatedMovie.ReleaseYear,
+		updatedMovie.Director,
+		updatedMovie.TrailerURL,
+		id)
+	if err != nil {
+		return err
+	}
+	_, err = r.db.Exec(c,
+		`
+		delete from movies_genres
+		where movie_id = $1
+		`,
+		id,
+	)
+	if err != nil {
+		return err
+	}
+	for _, genre := range updatedMovie.Genres {
+		_, err := r.db.Exec(c,
+			`
+			insert into movies_genres (movie_id, genre_id)
+			values ($1, $2)
+			`,
+			id,
+			genre.Id,
+		)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *MoviesRepository) Delete(c context.Context, id int) error {
+	_, err := r.db.Exec(c,
+		`
+		delete from movies_genres
+		where movie_id = $1
+		`,
+		id)
+	if err != nil {
+		return err
+	}
+	_, err = r.db.Exec(c,
+		`
+		delete from movies
+		where id = $1
+		`,
+		id)
+	if err != nil {
+		return err
+	}
+	return nil
 }
