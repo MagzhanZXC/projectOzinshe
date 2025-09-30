@@ -149,7 +149,13 @@ where m.id = $1
 
 func (r *MoviesRepository) Create(c context.Context, movie models.Movie) (int, error) {
 	var id int
-	row := r.db.QueryRow(c,
+
+	tx, err := r.db.Begin(c)
+	if err != nil {
+		return 0, nil
+	}
+
+	row := tx.QueryRow(c,
 		`
 		insert into movies (title, description, release_year, director, trailer_url)
 		values ($1, $2, $3, $4, $5) 
@@ -162,13 +168,14 @@ func (r *MoviesRepository) Create(c context.Context, movie models.Movie) (int, e
 		movie.TrailerURL,
 	)
 
-	err := row.Scan(&id)
+	err = row.Scan(&id)
+
 	if err != nil {
 		return 0, err
 	}
 
 	for _, genre := range movie.Genres {
-		_, err := r.db.Exec(c,
+		_, err := tx.Exec(c,
 			`
 			insert into movies_genres (movie_id, genre_id)
 			values ($1, $2)
@@ -184,7 +191,11 @@ func (r *MoviesRepository) Create(c context.Context, movie models.Movie) (int, e
 }
 
 func (r *MoviesRepository) Update(c context.Context, id int, updatedMovie models.Movie) error {
-	_, err := r.db.Exec(
+	tx, err := r.db.Begin(c)
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(
 		c,
 		`
 		update movies 
@@ -205,7 +216,7 @@ func (r *MoviesRepository) Update(c context.Context, id int, updatedMovie models
 	if err != nil {
 		return err
 	}
-	_, err = r.db.Exec(c,
+	_, err = tx.Exec(c,
 		`
 		delete from movies_genres
 		where movie_id = $1
@@ -216,7 +227,7 @@ func (r *MoviesRepository) Update(c context.Context, id int, updatedMovie models
 		return err
 	}
 	for _, genre := range updatedMovie.Genres {
-		_, err := r.db.Exec(c,
+		_, err := tx.Exec(c,
 			`
 			insert into movies_genres (movie_id, genre_id)
 			values ($1, $2)
@@ -232,7 +243,11 @@ func (r *MoviesRepository) Update(c context.Context, id int, updatedMovie models
 }
 
 func (r *MoviesRepository) Delete(c context.Context, id int) error {
-	_, err := r.db.Exec(c,
+	tx, err := r.db.Begin(c)
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(c,
 		`
 		delete from movies_genres
 		where movie_id = $1
@@ -241,7 +256,7 @@ func (r *MoviesRepository) Delete(c context.Context, id int) error {
 	if err != nil {
 		return err
 	}
-	_, err = r.db.Exec(c,
+	_, err = tx.Exec(c,
 		`
 		delete from movies
 		where id = $1
