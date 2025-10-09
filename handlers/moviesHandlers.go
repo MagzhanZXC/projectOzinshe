@@ -1,14 +1,17 @@
 package handlers
 
 import (
+	"fmt"
 	"mime/multipart"
 	"net/http"
+	"path/filepath"
 	"strconv"
 
 	"projectOzinshe/models"
 	repositories "projectOzinshe/repositories"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type MoviesHandler struct {
@@ -19,20 +22,21 @@ type MoviesHandler struct {
 type createMovieRequest struct {
 	Title       string                `form:"title"`
 	Description string                `form:"description"`
-	ReleaseYear int                   `form:"release_year"`
+	ReleaseYear int                   `form:"releaseYear"`
 	Director    string                `form:"director"`
-	TrailerUrl  string                `form:"trailer_url"`
+	TrailerUrl  string                `form:"trailerUrl"`
 	GenreIds    []int                 `form:"genreIds"`
 	Poster      *multipart.FileHeader `form:"poster"`
 }
 
 type updateMovieRequest struct {
-	Title       string
-	Description string
-	ReleaseYear int
-	Director    string
-	TrailerUrl  string
-	GenreIds    []int
+	Title       string                `form:"title"`
+	Description string                `form:"description"`
+	ReleaseYear int                   `form:"releaseYear"`
+	Director    string                `form:"director"`
+	TrailerUrl  string                `form:"trailerUrl"`
+	GenreIds    []int                 `form:"genreIds"`
+	Poster      *multipart.FileHeader `form:"poster"`
 }
 
 func NewMoviesHandler(
@@ -75,7 +79,7 @@ func (h *MoviesHandler) FindAll(c *gin.Context) {
 func (h *MoviesHandler) Create(c *gin.Context) {
 	var request createMovieRequest
 
-	err := c.BindJSON(&request)
+	err := c.Bind(&request)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, models.NewApiError("Could not bind payload"))
 		return
@@ -87,12 +91,21 @@ func (h *MoviesHandler) Create(c *gin.Context) {
 		return
 	}
 
+	filename := fmt.Sprintf("%s%s", uuid.NewString(), filepath.Ext(request.Poster.Filename))
+	filepath := fmt.Sprintf("images/%s", filename)
+	err = c.SaveUploadedFile(request.Poster, filepath)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.NewApiError(err.Error()))
+		return
+	}
+
 	movie := models.Movie{
 		Title:       request.Title,
 		Description: request.Description,
 		ReleaseYear: request.ReleaseYear,
 		Director:    request.Director,
 		TrailerUrl:  request.TrailerUrl,
+		PosterUrl:   filename,
 		Genres:      genres,
 	}
 
