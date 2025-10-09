@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"mime/multipart"
 	"net/http"
 	"strconv"
 
@@ -16,12 +17,13 @@ type MoviesHandler struct {
 }
 
 type createMovieRequest struct {
-	Title       string
-	Description string
-	ReleaseYear int
-	Director    string
-	TrailerUrl  string
-	GenreIds    []int
+	Title       string                `form:"title"`
+	Description string                `form:"description"`
+	ReleaseYear int                   `form:"release_year"`
+	Director    string                `form:"director"`
+	TrailerUrl  string                `form:"trailer_url"`
+	GenreIds    []int                 `form:"genreIds"`
+	Poster      *multipart.FileHeader `form:"poster"`
 }
 
 type updateMovieRequest struct {
@@ -75,7 +77,7 @@ func (h *MoviesHandler) Create(c *gin.Context) {
 
 	err := c.BindJSON(&request)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, models.NewApiError("Could not bind JSON"))
+		c.JSON(http.StatusBadRequest, models.NewApiError("Could not bind payload"))
 		return
 	}
 
@@ -90,7 +92,7 @@ func (h *MoviesHandler) Create(c *gin.Context) {
 		Description: request.Description,
 		ReleaseYear: request.ReleaseYear,
 		Director:    request.Director,
-		TrailerURL:  request.TrailerUrl,
+		TrailerUrl:  request.TrailerUrl,
 		Genres:      genres,
 	}
 
@@ -137,7 +139,7 @@ func (h *MoviesHandler) Update(c *gin.Context) {
 		Description: request.Description,
 		ReleaseYear: request.ReleaseYear,
 		Director:    request.Director,
-		TrailerURL:  request.TrailerUrl,
+		TrailerUrl:  request.TrailerUrl,
 		Genres:      genres,
 	}
 	h.moviesRepo.Update(c, id, movie)

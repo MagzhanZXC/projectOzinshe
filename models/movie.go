@@ -8,7 +8,7 @@ type Movie struct {
 	Director    string
 	Rating      int
 	IsWatched   bool
-	TrailerURL  string
-	PosterURL   string
+	TrailerUrl  string
+	PosterUrl   string
 	Genres      []Genre
 }

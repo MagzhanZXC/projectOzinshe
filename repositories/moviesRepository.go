@@ -28,6 +28,7 @@ m.director,
 m.rating,
 m.is_watched,
 m.trailer_url,
+m.poster_url,
 g.id,
 g.title
 from  movies m 
@@ -56,7 +57,8 @@ where m.id = $1
 			&m.Director,
 			&m.Rating,
 			&m.IsWatched,
-			&m.TrailerURL,
+			&m.TrailerUrl,
+			&m.PosterUrl,
 			&g.Id,
 			&g.Title,
 		)
@@ -89,6 +91,7 @@ m.director,
 m.rating,
 m.is_watched,
 m.trailer_url,
+m.poster_url,
 g.id,
 g.title
 from  movies m 
@@ -116,7 +119,8 @@ where m.id = $1
 			&m.Director,
 			&m.Rating,
 			&m.IsWatched,
-			&m.TrailerURL,
+			&m.TrailerUrl,
+			&m.PosterUrl,
 			&g.Id,
 			&g.Title,
 		)
@@ -157,15 +161,16 @@ func (r *MoviesRepository) Create(c context.Context, movie models.Movie) (int, e
 
 	row := tx.QueryRow(c,
 		`
-		insert into movies (title, description, release_year, director, trailer_url)
-		values ($1, $2, $3, $4, $5) 
+		insert into movies (title, description, release_year, director, trailer_url, poster_url)
+		values ($1, $2, $3, $4, $5, $6)
 		returning id
 		`,
 		movie.Title,
 		movie.Description,
 		movie.ReleaseYear,
 		movie.Director,
-		movie.TrailerURL,
+		movie.TrailerUrl,
+		movie.PosterUrl,
 	)
 
 	err = row.Scan(&id)
@@ -204,14 +209,16 @@ func (r *MoviesRepository) Update(c context.Context, id int, updatedMovie models
 		 description = $2,
 		 release_year = $3,
 		 director = $4,
-		 trailer_url = $5
-		 where id = $6
+		 trailer_url = $5,
+		 poster_url = $6
+		 where id = $7
 		`,
 		updatedMovie.Title,
 		updatedMovie.Description,
 		updatedMovie.ReleaseYear,
 		updatedMovie.Director,
-		updatedMovie.TrailerURL,
+		updatedMovie.TrailerUrl,
+		updatedMovie.PosterUrl,
 		id)
 	if err != nil {
 		return err
