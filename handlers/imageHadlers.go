@@ -1,7 +1,10 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 )
@@ -9,7 +12,7 @@ import (
 type imageHandlers struct {
 }
 
-func NewImageHandler() *imageHandlers {
+func NewImageHandlers() *imageHandlers {
 	return &imageHandlers{}
 }
 
@@ -19,14 +22,15 @@ func (h *imageHandlers) HandleGetImageById(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, "invalid image id")
 		return
 	}
-}
 
-fileName := filepath.Base(imageId)
-byteFile, err := os.ReadFile(fmt.Sprintf("images/%s", imageId))
-if err != nil {
-	c.JSON(http.StatusInternalServerError, err.Error())
-	return
-}
+	fileName := filepath.Base(imageId)
+	byteFile, err := os.ReadFile(fmt.Sprintf("images/%s", imageId))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, err.Error())
+		return
+	}
 
-c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
-c.Data(http.StatusOK, "application/octet-stream", byteFile)
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
+	c.Data(http.StatusOK, "application/octet-stream", byteFile)
+
+}

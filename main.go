@@ -39,6 +39,7 @@ func main() {
 		genresRepository,
 	)
 	genresHandler := handlers.NewGenreHandlers(genresRepository)
+	imageHandlers := handlers.NewImageHandlers()
 
 	r.GET("/movies/:id", moviesHandler.FindById)
 	r.GET("/movies", moviesHandler.FindAll)
@@ -51,6 +52,8 @@ func main() {
 	r.POST("/genres", genresHandler.Create)
 	r.PUT("/genres/:id", genresHandler.Update)
 	r.DELETE("/genres/:id", genresHandler.Delete)
+
+	r.GET("/images/:imageId", imageHandlers.HandleGetImageById)
 
 	r.Run(config.Config.AppHost)
 }
