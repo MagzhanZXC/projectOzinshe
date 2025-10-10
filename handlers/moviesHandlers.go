@@ -91,9 +91,7 @@ func (h *MoviesHandler) Create(c *gin.Context) {
 		return
 	}
 
-	filename := fmt.Sprintf("%s%s", uuid.NewString(), filepath.Ext(request.Poster.Filename))
-	filepath := fmt.Sprintf("images/%s", filename)
-	err = c.SaveUploadedFile(request.Poster, filepath)
+	filename, err := h.saveMoviePoster(c, request.Poster)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.NewApiError(err.Error()))
 		return
@@ -120,6 +118,14 @@ func (h *MoviesHandler) Create(c *gin.Context) {
 	})
 }
 
+func (h *MoviesHandler) saveMoviePoster(c *gin.Context, poster *multipart.FileHeader) (string, error) {
+	filename := fmt.Sprintf("%s%s", uuid.NewString(), filepath.Ext(poster.Filename))
+	filepath := fmt.Sprintf("images/%s", filename)
+	err := c.SaveUploadedFile(poster, filepath)
+
+	return filename, err
+}
+
 func (h *MoviesHandler) Update(c *gin.Context) {
 	idstr := c.Param("id")
 	id, err := strconv.Atoi(idstr)
@@ -136,9 +142,9 @@ func (h *MoviesHandler) Update(c *gin.Context) {
 	}
 
 	var request updateMovieRequest
-	err = c.BindJSON(&request)
+	err = c.Bind(&request)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, models.NewApiError("Could not bind JSON"))
+		c.JSON(http.StatusBadRequest, models.NewApiError("Could not bind error"))
 		return
 	}
 
@@ -147,12 +153,20 @@ func (h *MoviesHandler) Update(c *gin.Context) {
 		c.Status(http.StatusInternalServerError)
 		return
 	}
+
+	filename, err := h.saveMoviePoster(c, request.Poster)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.NewApiError(err.Error()))
+		return
+	}
+
 	movie := models.Movie{
 		Title:       request.Title,
 		Description: request.Description,
 		ReleaseYear: request.ReleaseYear,
 		Director:    request.Director,
 		TrailerUrl:  request.TrailerUrl,
+		PosterUrl:   filename,
 		Genres:      genres,
 	}
 	h.moviesRepo.Update(c, id, movie)
@@ -174,6 +188,54 @@ func (h *MoviesHandler) Delete(c *gin.Context) {
 	}
 
 	h.moviesRepo.Delete(c, id)
+
+	c.Status(http.StatusOK)
+}
+
+func (h *MoviesHandler) HandleSetRating(c *gin.Context) {
+	idstr := c.Param("movieId")
+	id, err := strconv.Atoi(idstr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.NewApiError("Invalid movie ID"))
+		return
+	}
+
+	ratingStr := c.Query("rating")
+	rating, err := strconv.Atoi(ratingStr)
+	if err != nil || rating < 1 || rating > 5 {
+		c.JSON(http.StatusBadRequest, models.NewApiError("Invalid rating value"))
+		return
+	}
+
+	err = h.moviesRepo.SetRating(c, id, rating)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.NewApiError(err.Error()))
+		return
+	}
+
+	c.Status(http.StatusOK)
+}
+
+func (h *MoviesHandler) HandleSetWatched(c *gin.Context) {
+	idstr := c.Param("movieId")
+	id, err := strconv.Atoi(idstr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.NewApiError("Invalid movie ID"))
+		return
+	}
+
+	isWatchedStr := c.Query("isWatched")
+	isWatched, err := strconv.ParseBool(isWatchedStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.NewApiError("Invalid isWatched value"))
+		return
+	}
+
+	err = h.moviesRepo.SetWatched(c, id, isWatched)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.NewApiError(err.Error()))
+		return
+	}
 
 	c.Status(http.StatusOK)
 }

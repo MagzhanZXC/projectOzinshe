@@ -34,24 +34,33 @@ func main() {
 
 	moviesRepository := repositories.NewMoviesRepository(conn)
 	genresRepository := repositories.NewGenresRepository(conn)
+	watchlistRepository := repositories.NewWatchlistRepository(conn)
+
 	moviesHandler := handlers.NewMoviesHandler(
 		moviesRepository,
 		genresRepository,
 	)
 	genresHandler := handlers.NewGenreHandlers(genresRepository)
 	imageHandlers := handlers.NewImageHandlers()
+	watchlistHandlers := handlers.NewWatchlistHandler(moviesRepository, watchlistRepository)
 
 	r.GET("/movies/:id", moviesHandler.FindById)
 	r.GET("/movies", moviesHandler.FindAll)
 	r.POST("/movies", moviesHandler.Create)
 	r.PUT("/movies/:id", moviesHandler.Update)
 	r.DELETE("/movies/:id", moviesHandler.Delete)
+	r.PATCH("/movies/:movieId/rate", moviesHandler.HandleSetRating)
+	r.PATCH("/movies/:movieId/watched", moviesHandler.HandleSetWatched)
 
 	r.GET("/genres/:id", genresHandler.FindById)
 	r.GET("/genres", genresHandler.FindAll)
 	r.POST("/genres", genresHandler.Create)
 	r.PUT("/genres/:id", genresHandler.Update)
 	r.DELETE("/genres/:id", genresHandler.Delete)
+
+	r.GET("watchlist", watchlistHandlers.HandleGetMovies)
+	r.POST("watchlist/:movieId", watchlistHandlers.HandleAddMovie)
+	r.DELETE("watchlist/:movieId", watchlistHandlers.HandleRemoveMovie)
 
 	r.GET("/images/:imageId", imageHandlers.HandleGetImageById)
 

@@ -274,3 +274,35 @@ func (r *MoviesRepository) Delete(c context.Context, id int) error {
 	}
 	return nil
 }
+
+func (r *MoviesRepository) SetRating(c context.Context, id int, rating int) error {
+	_, err := r.db.Exec(c,
+		`
+		update movies
+		set rating = $1
+		where id = $2
+		`,
+		rating,
+		id,
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *MoviesRepository) SetWatched(c context.Context, id int, isWatched bool) error {
+	_, err := r.db.Exec(c,
+		`
+		update movies
+		set is_watched = $1
+		where id = $2
+		`,
+		isWatched,
+		id,
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
